@@ -18,11 +18,11 @@ nome_site = Config.get("INIT", "SITE_NAME")
 nome_dominio = Config.get("INIT", "DOMAIN_NAME")
 
 if nome_site == "none":
-    Logger.critical("Nome de site não existe!")
-    raise ValueError("Nome do site não existe! (none)")
+    Logger.critical("Nome de site não existe! Ajuste isso no arquivo settings.ini.")
+    raise ValueError("Nome do site não existe! Ajuste isso no arquivo settings.ini. (none)")
 if nome_dominio == "none":
-    Logger.critical("Nome do domínio não existe!")
-    raise ValueError("Nome do domínio não existe! (none)")
+    Logger.critical("Nome do domínio não existe! Ajuste isso no arquivo settings.ini.")
+    raise ValueError("Nome do domínio não existe! Ajuste isso no arquivo settings.ini. (none)")
 
 # criar pasta e arquivo no sharepoint
 # caso modificar o caminho, mudar as variáveis abaixo
@@ -81,9 +81,10 @@ class UpdateSharepointFile:
                     for hour in dataset.get("times", []):
                         rows.append({
                             "lastupdated": datetime.now(),
-                            "name": dataset.get("name"),
+                            "name": dataset.get("name", "-"),
                             "workspace": workspace,
-                            "time": hour
+                            "time": hour,
+                            "enabled": dataset.get("enabled", "-")
                         })
 
         self._data = pandas.DataFrame(rows).fillna("-")
