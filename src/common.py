@@ -177,6 +177,22 @@ def get_access_token(driver: webdriver, scope: str) -> str:
 
     return access_token
 
+def handle_request_exception(attempt: int, error: str, scope: str) -> str:
+    """
+        This function handles the request exception in the modules 'sharepoint' and 'info'
+    """
+    Logger.error("[REQUESTS] Tentativa %s. Erro: %s", attempt, error)
+    if attempt == 1:
+        Logger.info("[REQUESTS] Chamando função para adquirir novo access token...")
+        return login(scope)
+    if attempt < MAX_RETRIES:
+        Logger.info("[REQUESTS] Tentando novamente em %s segundos...", RETRY_DELAY)
+        time.sleep(RETRY_DELAY)
+    else:
+        Logger.critical("[REQUESTS] Não foi possível pegar as workspaces!")
+        sys.exit()
+    return ""
+
 def wait(driver: webdriver) -> WebDriverWait:
     """
         Método usado somente para reduzir o método WebDriverWait.

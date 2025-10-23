@@ -5,15 +5,13 @@
 """
 
 import io
-import sys
-import time
 from urllib.parse import quote
 import pandas
 import requests
 from requests.exceptions import RequestException
 
-from src.common import RETRY_DELAY, MAX_RETRIES, TIMEOUT
-from src.common import login
+from src.common import MAX_RETRIES, TIMEOUT
+from src.common import handle_request_exception
 from src.setup import Config, Logger, get_env_values
 
 nome_site = Config.get("INIT", "SITE_NAME")
@@ -109,13 +107,8 @@ class UpdateSharepointFile:
                 Logger.info("[REQUESTS] Arquivo atualizado com sucesso no SharePoint.")
                 return
             except RequestException as error:
-                Logger.error("[REQUESTS] Tentativa %s. Erro: %s", attempt, error)
-                if attempt == 1:
-                    Logger.info("[REQUESTS] Chamando função para adquirir novo access token...")
-                    self._access_token = login(SCOPE)
-                elif attempt < MAX_RETRIES:
-                    Logger.info("[REQUESTS] Tentando novamente em %s segundos...", RETRY_DELAY)
-                    time.sleep(RETRY_DELAY)
-                else:
-                    Logger.critical("[REQUESTS] Não foi possível publicar no sharepoint!")
-                    sys.exit()
+                self._access_token = handle_request_exception(
+                    attempt=attempt,
+                    error=error,
+                    scope=SCOPE
+                )
