@@ -107,6 +107,7 @@ class UpdateSharepointFile:
                         f" | Resposta: {request.text}"
                     )
                 Logger.info("[REQUESTS] Arquivo atualizado com sucesso no SharePoint.")
+                return
             except RequestException as error:
                 Logger.error("[REQUESTS] Tentativa %s. Erro: %s", attempt, error)
                 if attempt == 1:
