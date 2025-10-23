@@ -11,8 +11,7 @@ from urllib.parse import quote
 import requests
 from requests.exceptions import RequestException
 
-from src.common import RETRY_DELAY, MAX_RETRIES, TIMEOUT
-from src.common import login, handle_request_exception
+from src.common import RETRY_DELAY, MAX_RETRIES, TIMEOUT, login, handle_request_exception
 from src.setup import Logger, get_env_values
 
 BASE_URL = "https://api.powerbi.com/v1.0/myorg/groups"
@@ -68,11 +67,11 @@ class WebExtractor:
                     list({(w["name"], w["id"]): w for w in all_workspaces}.values()),
                     indent=4
                 )
-            except RequestException as error:
-                self._access_token = handle_request_exception(
+            except RequestException as pbi_error:
+                handle_request_exception(
+                    error=pbi_error,
                     attempt=attempt,
-                    error=error,
-                    scope=SCOPE
+                    get_new_token=lambda: setattr(self, "_access_token", login(SCOPE))
                 )
         return ""
 

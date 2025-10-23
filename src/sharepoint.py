@@ -11,8 +11,7 @@ import pandas
 import requests
 from requests.exceptions import RequestException
 
-from src.common import MAX_RETRIES, TIMEOUT
-from src.common import handle_request_exception
+from src.common import MAX_RETRIES, TIMEOUT, login, handle_request_exception
 from src.setup import Config, Logger, get_env_values
 
 nome_site = Config.get("INIT", "SITE_NAME")
@@ -94,6 +93,7 @@ class UpdateSharepointFile:
         excel_buffer.seek(0)
 
         Logger.info("[REQUESTS] Publicando arquivo no Sharepoint...")
+
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 request = requests.put(
@@ -112,9 +112,9 @@ class UpdateSharepointFile:
                     )
                 Logger.info("[REQUESTS] Arquivo atualizado com sucesso no SharePoint.")
                 return
-            except RequestException as error:
-                self._access_token = handle_request_exception(
+            except RequestException as sharepoint_error:
+                handle_request_exception(
+                    error=sharepoint_error,
                     attempt=attempt,
-                    error=error,
-                    scope=SCOPE
+                    get_new_token=lambda: setattr(self, "_access_token", login(SCOPE))
                 )

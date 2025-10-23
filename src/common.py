@@ -177,21 +177,61 @@ def get_access_token(driver: webdriver, scope: str) -> str:
 
     return access_token
 
-def handle_request_exception(attempt: int, error: str, scope: str) -> str:
+def login(scope: str) -> str:
     """
-        This function handles the request exception in the modules 'sharepoint' and 'info'
+        Função responsável por fazer login e conseguir o access_token.
     """
+
+    for attempt in range(1, MAX_RETRIES + 1, 1):
+        try:
+            driver = webdriver.Chrome(service=CHROME_SERVICE, options=WEBDRIVER_OPTIONS)
+
+            return get_access_token(driver=driver, scope=scope)
+        except WebDriverException as error:
+            Logger.error("[SELENIUM] Tentativa %s. Erro: %s", attempt, error)
+            if attempt < MAX_RETRIES:
+                Logger.info("[SELENIUM] Tentando novamente em %s segundos...", RETRY_DELAY)
+                time.sleep(RETRY_DELAY)
+            else:
+                Logger.critical("[SELENIUM] Não foi possível fazer login!")
+                sys.exit()
+        finally:
+            if driver:
+                driver.quit()
+    return ""
+
+# Utilitárias
+
+def handle_request_exception(error: RequestException, attempt: int, get_new_token) -> None:
+    """
+        This module is used in the module info and sharepoint, to handle request errors.
+    """
+
     Logger.error("[REQUESTS] Tentativa %s. Erro: %s", attempt, error)
     if attempt == 1:
         Logger.info("[REQUESTS] Chamando função para adquirir novo access token...")
-        return login(scope)
+        get_new_token()
     if attempt < MAX_RETRIES:
         Logger.info("[REQUESTS] Tentando novamente em %s segundos...", RETRY_DELAY)
         time.sleep(RETRY_DELAY)
     else:
-        Logger.critical("[REQUESTS] Não foi possível pegar as workspaces!")
+        Logger.critical("[REQUESTS] Requisição falhou para todas as tentativas!")
         sys.exit()
-    return ""
+
+def wait_loading(driver: webdriver) -> None:
+    """
+        Função que espera o carregamento completo da página.
+        Útil para garantir que a página esteja totalmente carregada antes de prosseguir.
+
+        Parâmetros:
+        - driver (webdriver): Instância do WebDriver do SELENIUM. É a instância do navegador ativo.
+    """
+
+    while True:
+        state = driver.execute_script("return document.readyState")
+
+        if state == "complete":
+            break
 
 def wait(driver: webdriver) -> WebDriverWait:
     """
@@ -227,41 +267,3 @@ def interact_with_ui(driver: webdriver, css: str, value = None) -> None:
         wait(driver).until(EC.visibility_of_element_located(selector))
         element = driver.find_element(*selector) # o '*' desempacota a tupla
         element.click()
-
-def wait_loading(driver: webdriver) -> None:
-    """
-        Função que espera o carregamento completo da página.
-        Útil para garantir que a página esteja totalmente carregada antes de prosseguir.
-
-        Parâmetros:
-        - driver (webdriver): Instância do WebDriver do SELENIUM. É a instância do navegador ativo.
-    """
-
-    while True:
-        state = driver.execute_script("return document.readyState")
-
-        if state == "complete":
-            break
-
-def login(scope: str) -> str:
-    """
-        Função responsável por fazer login e conseguir o access_token.
-    """
-
-    for attempt in range(1, MAX_RETRIES + 1, 1):
-        try:
-            driver = webdriver.Chrome(service=CHROME_SERVICE, options=WEBDRIVER_OPTIONS)
-
-            return get_access_token(driver=driver, scope=scope)
-        except WebDriverException as error:
-            Logger.error("[SELENIUM] Tentativa %s. Erro: %s", attempt, error)
-            if attempt < MAX_RETRIES:
-                Logger.info("[SELENIUM] Tentando novamente em %s segundos...", RETRY_DELAY)
-                time.sleep(RETRY_DELAY)
-            else:
-                Logger.critical("[SELENIUM] Não foi possível fazer login!")
-                sys.exit()
-        finally:
-            if driver:
-                driver.quit()
-    return ""
