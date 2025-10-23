@@ -10,7 +10,6 @@ import time
 from urllib.parse import quote
 import pandas
 import requests
-import json
 from requests.exceptions import RequestException
 
 from src.common import RETRY_DELAY, MAX_RETRIES, TIMEOUT
@@ -51,6 +50,8 @@ class UpdateSharepointFile:
     """
 
     def __init__(self) -> None:
+        self._access_token = get_env_values().get('ACCESS_TOKEN_SHAREPOINT')
+
         self._data = {}
 
     def get_data(self) -> dict:
@@ -88,8 +89,6 @@ class UpdateSharepointFile:
         self._data.to_excel(excel_buffer, index=False)
         excel_buffer.seek(0)
 
-        self._access_token = get_env_values().get('ACCESS_TOKEN_SHAREPOINT')
-
         Logger.info("[REQUESTS] Publicando arquivo no Sharepoint...")
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -103,7 +102,10 @@ class UpdateSharepointFile:
                 )
 
                 if request.status_code not in (200, 201, 204):
-                    raise RequestException(f"Status: {request.status_code} | Resposta: {request.text}")
+                    raise RequestException(
+                        f"Status: {request.status_code}"
+                        f" | Resposta: {request.text}"
+                    )
                 Logger.info("[REQUESTS] Arquivo atualizado com sucesso no SharePoint.")
             except RequestException as error:
                 Logger.error("[REQUESTS] Tentativa %s. Erro: %s", attempt, error)

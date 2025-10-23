@@ -11,6 +11,7 @@ import sys
 import time
 import requests
 from requests.exceptions import RequestException
+from dotenv import set_key
 
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import WebDriverException
@@ -22,8 +23,6 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 from src.setup import Config, Logger, get_env_path, get_env_values
-
-from dotenv import set_key
 
 # Variáveis globais
 
@@ -169,15 +168,13 @@ def get_access_token(driver: webdriver, scope: str) -> str:
     if not access_token:
         Logger.critical("[REQUESTS] Não foi possível obter o token de acesso!")
         sys.exit()
-    
-    Logger.debug("[REQUESTS] %s", access_token)
 
     if "sharepoint" in scope:
         set_key(get_env_path(), "ACCESS_TOKEN_SHAREPOINT", access_token)
     else:
         set_key(get_env_path(), "ACCESS_TOKEN", access_token)
     Logger.info("[REQUESTS] Access token adquirido com sucesso!")
-    
+
     return access_token
 
 def wait(driver: webdriver) -> WebDriverWait:
@@ -231,23 +228,24 @@ def wait_loading(driver: webdriver) -> None:
             break
 
 def login(scope: str) -> str:
-        """
-            Função responsável por fazer login e conseguir o access_token.
-        """
+    """
+        Função responsável por fazer login e conseguir o access_token.
+    """
 
-        for attempt in range(1, MAX_RETRIES + 1, 1):
-            try:
-                driver = webdriver.Chrome(service=CHROME_SERVICE, options=WEBDRIVER_OPTIONS)
+    for attempt in range(1, MAX_RETRIES + 1, 1):
+        try:
+            driver = webdriver.Chrome(service=CHROME_SERVICE, options=WEBDRIVER_OPTIONS)
 
-                return get_access_token(driver=driver, scope=scope)
-            except WebDriverException as error:
-                Logger.error("[SELENIUM] Tentativa %s. Erro: %s", attempt, error)
-                if attempt < MAX_RETRIES:
-                    Logger.info("[SELENIUM] Tentando novamente em %s segundos...", RETRY_DELAY)
-                    time.sleep(RETRY_DELAY)
-                else:
-                    Logger.critical("[SELENIUM] Não foi possível fazer login!")
-                    sys.exit()
-            finally:
-                if driver:
-                    driver.quit()
+            return get_access_token(driver=driver, scope=scope)
+        except WebDriverException as error:
+            Logger.error("[SELENIUM] Tentativa %s. Erro: %s", attempt, error)
+            if attempt < MAX_RETRIES:
+                Logger.info("[SELENIUM] Tentando novamente em %s segundos...", RETRY_DELAY)
+                time.sleep(RETRY_DELAY)
+            else:
+                Logger.critical("[SELENIUM] Não foi possível fazer login!")
+                sys.exit()
+        finally:
+            if driver:
+                driver.quit()
+    return ""
