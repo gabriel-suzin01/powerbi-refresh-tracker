@@ -94,30 +94,9 @@ class WebExtractor:
                 for workspace in json.loads(self.workspaces):
                     all_content.setdefault(workspace['name'], {
                             "workspace_id": workspace['id'],
-                            "dataflows": {},
                             "datasets": {}
                         }
                     )
-
-                    dataflow_url = BASE_URL + f"/{workspace['id']}/dataflows"
-                    response = requests.get(url=dataflow_url, headers=headers, timeout=TIMEOUT)
-
-                    if response.status_code == 403:
-                        Logger.warning(
-                            "[REQUESTS] Dataflows - "
-                            "Acesso negado à workspace %s. Pulando...", workspace['name']
-                        )
-                        continue
-
-                    response.raise_for_status()
-                    dataflows = response.json()
-
-                    for dataflow in dataflows.get("value"):
-                        all_content[workspace['name']]['dataflows'].update(
-                            {
-                                dataflow.get("name", "none"): dataflow.get("objectId", "none")
-                            }
-                        )
 
                     dataset_url = BASE_URL + f"/{workspace['id']}/datasets"
                     response = requests.get(url=dataset_url, headers=headers, timeout=TIMEOUT)
@@ -157,67 +136,15 @@ class WebExtractor:
             Método que coleta as informações de agendamento de atualização.
         """
 
-        self._data.setdefault("canceled", {})
         for workspace_object in (objects := json.loads(self.workspace_objects)):
             headers = {
                 "Authorization": f"Bearer {self._access_token}" 
             }
 
             self._data.setdefault(workspace_object, {})
-            # self._data[workspace_object].setdefault("dataflows", {})
+            self._data.setdefault("canceled", [])
+
             self._data[workspace_object].setdefault("datasets", {})
-
-            self._canceled.setdefault(workspace_object, {})
-            # self._canceled[workspace_object].setdefault("dataflows", [])
-            self._canceled[workspace_object].setdefault("datasets", [])
-
-        #     ATUALMENTE DESATIVADO: API NÃO TEM GET REFRESH SCHEDULES DE DATAFLOWS 😢
-
-        #     for dataflow in (dataflows := objects[workspace_object]['dataflows']):
-        #         self._data[workspace_object]["dataflows"].setdefault(dataflow, {})
-
-        #         Logger.info("Pegando informações do dataflow %s", dataflow)
-        #         try:
-        #             dataflow_url = (
-        #                 BASE_URL
-        #                 + f"/{quote(objects[workspace_object]['workspace_id'], safe='/-')}"
-        #                 + f"/dataflows/{quote(dataflows[dataflow], safe='/-')}/refreshSchedule"
-        #             )
-        #             dataflow_request = requests.get(
-        #                 url=dataflow_url,
-        #                 headers=headers,
-        #                 timeout=TIMEOUT
-        #             )
-
-        #             if dataflow_request.status_code == 404:
-        #                 Logger.warning(
-        #                     "Agendamento não realizado / cancelado. Dataflow: %s. Workspace: %s.",
-        #                     workspace_object, dataflow
-        #                 )
-        #                 self._canceled[workspace_object]["dataflows"].append(dataflow)
-        #                 continue
-
-        #             dataflow_request.raise_for_status()
-        #             dataflow_data = dataflow_request.json()
-
-        #             self._data[workspace_object]["dataflows"][dataflow] = {
-        #                 "days": dataflow_data.get("days", "none"),
-        #                 "times": dataflow_data.get("times", "none"),
-        #                 "enabled": dataflow_data.get("enabled", "none"),
-        #             }
-
-        #             time.sleep(REQUEST_INTERVAL)
-        #         except RequestException as error:
-        #             if error.response.status_code == 403:
-        #                 Logger.warning(
-        #                     "[REQUESTS] Dataflow - "
-        #                     "Acesso negado ao dataflow %s na workspace %s."
-        #                     "Tentando pegar novo access token...",
-        #                     dataflow, workspace_object
-        #                 )
-        #                 self._access_token = login(SCOPE)
-        #                 return self._get_schedules()
-        #             Logger.error("[REQUESTS] Dataflow %s: %s", dataflow, error)
 
             for dataset in (datasets := objects[workspace_object]['datasets']):
                 self._data[workspace_object]["datasets"].setdefault(dataset, {})
@@ -240,7 +167,7 @@ class WebExtractor:
                             "Agendamento não realizado / cancelado. Dataset: %s. Workspace: %s.",
                             workspace_object, dataset
                         )
-                        self._canceled[workspace_object]["datasets"].append(dataset)
+                        self._data["canceled"].append(dataset)
                         continue
 
                     dataset_request.raise_for_status()
@@ -267,7 +194,6 @@ class WebExtractor:
                         self._access_token = login(SCOPE)
                         return self._get_schedules()
                     Logger.error("[REQUESTS] Dataset %s: %s", dataset, error)
-        self._data["canceled"].update(self._canceled)
         return json.dumps(self._data, indent=4)
 
     @property

@@ -5,6 +5,7 @@
 """
 
 import io
+from datetime import datetime
 from urllib.parse import quote
 import pandas
 import requests
@@ -73,13 +74,18 @@ class UpdateSharepointFile:
         rows = []
 
         for workspace, objects in data_json.items():
-            for _, dataset in objects.items():
-                for hour in dataset.get("times", []):
-                    rows.append({
-                        "name": dataset.get("name"),
-                        "workspace": workspace,
-                        "time": hour
-                    })
+            if isinstance(objects, list):
+                for dataset in objects:
+                    rows.append({"canceled": dataset})
+            else:
+                for _, dataset in objects.items():
+                    for hour in dataset.get("times", []):
+                        rows.append({
+                            "lastupdated": datetime.now(),
+                            "name": dataset.get("name"),
+                            "workspace": workspace,
+                            "time": hour
+                        })
 
         self._data = pandas.DataFrame(rows).fillna("-")
 
